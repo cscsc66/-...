@@ -506,7 +506,67 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 .stat-details span { font-size: 1.5rem; font-weight: 800; color: #333; }
 .empty-state { text-align: center; color: #888; padding: 3rem; background: rgba(255,255,255,0.5); border-radius: 16px; border: 2px dashed #ffc2d1; }
 
-/* Responsiveness */
+/* Meme Completion Screen */
+.meme-completed-screen {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle, #fb6f92, #ffb3c6);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  animation: bgPulse 2s infinite alternate;
+  padding: 2rem 1rem;
+  overflow-y: auto; /* Allow scrolling on very short screens */
+}
+.meme-title {
+  font-size: clamp(2.5rem, 12vw, 6rem);
+  font-weight: 900;
+  color: white;
+  text-transform: uppercase;
+  text-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  text-align: center;
+  animation: textBounce 1s infinite alternate cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  line-height: 1.2;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 95vw;
+}
+.meme-subtitle {
+  font-size: 1.8rem;
+  color: white;
+  text-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  margin-top: 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+.meme-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.meme-actions .btn {
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.meme-secondary-btn {
+  background: rgba(255,255,255,0.2) !important;
+  color: white !important;
+}
+.meme-secondary-btn:hover {
+  background: rgba(255,255,255,0.3) !important;
+}
+@keyframes bgPulse {
+  0% { background: radial-gradient(circle, #fb6f92, #ffb3c6); }
+  100% { background: radial-gradient(circle, #ff8fab, #ffe5ec); }
+}
+@keyframes textBounce {
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.1) translateY(-20px); }
+}
+
 /* Responsiveness */
 @media (max-width: 768px) {
   /* Layout Adjustments */
@@ -545,68 +605,10 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
   .auth-card { padding: 1.5rem; margin: 1rem; }
   
   /* Meme Animation Adjustments */
-  .meme-title { font-size: 3rem; margin-bottom: 0.5rem; }
+  .meme-title { font-size: clamp(2rem, 12vw, 3.5rem); margin-bottom: 0.5rem; }
   .meme-subtitle { font-size: 1.1rem; padding: 0 1rem; }
   .meme-actions { flex-direction: column; width: 100%; padding: 0 1.5rem; }
   .meme-actions .btn { width: 100%; justify-content: center; }
-}
-
-/* Meme Completion Screen */
-.meme-completed-screen {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: radial-gradient(circle, #fb6f92, #ffb3c6);
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  animation: bgPulse 2s infinite alternate;
-  padding: 2rem 1rem;
-  overflow-y: auto; /* Allow scrolling on very short screens */
-}
-.meme-title {
-  font-size: 6rem;
-  font-weight: 900;
-  color: white;
-  text-transform: uppercase;
-  text-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  text-align: center;
-  animation: textBounce 1s infinite alternate cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  line-height: 1.1;
-}
-.meme-subtitle {
-  font-size: 1.8rem;
-  color: white;
-  text-shadow: 0 4px 15px rgba(0,0,0,0.2);
-  margin-top: 1rem;
-  text-align: center;
-  font-weight: 600;
-}
-.meme-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 2rem;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.meme-actions .btn {
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-.meme-secondary-btn {
-  background: rgba(255,255,255,0.2) !important;
-  color: white !important;
-}
-.meme-secondary-btn:hover {
-  background: rgba(255,255,255,0.3) !important;
-}
-@keyframes bgPulse {
-  0% { background: radial-gradient(circle, #fb6f92, #ffb3c6); }
-  100% { background: radial-gradient(circle, #ff8fab, #ffe5ec); }
-}
-@keyframes textBounce {
-  0% { transform: scale(1) translateY(0); }
-  100% { transform: scale(1.1) translateY(-20px); }
 }
 
 /* Landscape and Short Screen Optimizations for Meme Screen */
@@ -616,7 +618,7 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
     padding-top: 2rem;
   }
   .meme-title {
-    font-size: 3rem;
+    font-size: clamp(1.5rem, 8vw, 3rem);
     animation: textBounceSmall 1s infinite alternate cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
   .meme-subtitle {
