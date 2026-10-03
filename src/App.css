@@ -562,7 +562,8 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
   justify-content: center;
   align-items: center;
   animation: bgPulse 2s infinite alternate;
-  padding: 1rem;
+  padding: 2rem 1rem;
+  overflow-y: auto; /* Allow scrolling on very short screens */
 }
 .meme-title {
   font-size: 6rem;
@@ -572,6 +573,7 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
   text-shadow: 0 10px 30px rgba(0,0,0,0.3);
   text-align: center;
   animation: textBounce 1s infinite alternate cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  line-height: 1.1;
 }
 .meme-subtitle {
   font-size: 1.8rem;
@@ -605,4 +607,27 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 @keyframes textBounce {
   0% { transform: scale(1) translateY(0); }
   100% { transform: scale(1.1) translateY(-20px); }
+}
+
+/* Landscape and Short Screen Optimizations for Meme Screen */
+@media (max-height: 600px) and (orientation: landscape), (max-height: 500px) {
+  .meme-completed-screen {
+    justify-content: flex-start;
+    padding-top: 2rem;
+  }
+  .meme-title {
+    font-size: 3rem;
+    animation: textBounceSmall 1s infinite alternate cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+  .meme-subtitle {
+    font-size: 1.2rem;
+    margin-top: 0.5rem;
+  }
+  .meme-actions {
+    margin-top: 1rem;
+  }
+}
+@keyframes textBounceSmall {
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.05) translateY(-10px); }
 }
