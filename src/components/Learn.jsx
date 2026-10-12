@@ -1,211 +1,109 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useEffect, useRef } from 'react';
 import { Volume2, Settings, X, Shuffle, Star, VolumeX, Flag, ArrowRight } from 'lucide-react';
 import CompletionScreen from './CompletionScreen';
 import { playSound } from '../utils/sound';
 
-function Learn({ set, onBack }) {
-  // Bucketing system
-  const [buckets, setBuckets] = useState({
-    remaining: [],
-    mastered: []
-  });
-  
-  const [queue, setQueue] = useState([]);
-  const [showRoundSummary, setShowRoundSummary] = useState(false);
-  
-  const [roundStats, setRoundStats] = useState({
-    movedToMastered: 0,
-    incorrect: 0
-  });
+const defaultSettings = { audio: true, multipleChoice: true, written: true, flashcards: true, shuffle: true, studyStarredOnly: false };
 
-  const [currentCard, setCurrentCard] = useState(null);
-  const [options, setOptions] = useState([]);
+function makeQuestion(card, cards, settings) {
+  if (!card) return { currentCard: null, questionType: 'multipleChoice', options: [] };
+  const types = ['multipleChoice', 'written', 'flashcards'].filter(type => settings[type]);
+  const questionType = types.length ? types[Math.floor(Math.random() * types.length)] : 'multipleChoice';
+  const wrong = cards.filter(item => item.id !== card.id).sort(() => 0.5 - Math.random()).slice(0, 3);
+  return { currentCard: card, questionType, options: [card, ...wrong].sort(() => 0.5 - Math.random()) };
+}
+
+function makeRound(buckets, cards, settings) {
+  const remaining = [...buckets.remaining];
+  if (settings.shuffle) remaining.sort(() => 0.5 - Math.random());
+  const queue = remaining.slice(0, 7);
+  return { buckets, queue, showRoundSummary: false, roundStats: { movedToMastered: 0, incorrect: 0 },
+    ...makeQuestion(queue[0], cards, settings) };
+}
+
+function makeSession(cards, settings, starredIds) {
+  const active = settings.studyStarredOnly ? cards.filter(card => starredIds.includes(card.id)) : cards;
+  return makeRound({ remaining: active, mastered: [] }, cards, settings);
+}
+
+function Learn({ set, onBack, starredIds, onMasteredChange }) {
+  const [settings, setSettings] = useState(defaultSettings);
+  const [session, setSession] = useState(() => makeSession(set.cards, defaultSettings, starredIds));
+  const { buckets, queue, showRoundSummary, roundStats, currentCard, options, questionType } = session;
   const [showResult, setShowResult] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
-  
-  // Question Types
-  const [questionType, setQuestionType] = useState('multipleChoice');
   const [writtenAnswer, setWrittenAnswer] = useState('');
   const [isFlipped, setIsFlipped] = useState(false);
-
-  // Settings
   const [showSettings, setShowSettings] = useState(false);
-  const [settings, setSettings] = useState({
-    audio: true,
-    multipleChoice: true,
-    written: true,
-    flashcards: true,
-    shuffle: true,
-    studyStarredOnly: false,
-  });
+  const timerRef = useRef(null);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
 
-  const [starred, setStarred] = useState(new Set());
-  
-  // Ref to hold latest state for callbacks if needed, though we use functional state updates
-  const bucketsRef = useRef(buckets);
-  useEffect(() => { bucketsRef.current = buckets; }, [buckets]);
-
-  useEffect(() => {
-    // Start session
-    let activeCards = [...set.cards];
-    if (settings.studyStarredOnly && starred.size > 0) {
-      activeCards = activeCards.filter(c => starred.has(c.id));
-    }
-    
-    if (settings.shuffle) {
-      activeCards.sort(() => 0.5 - Math.random());
-    }
-
-    const initialBuckets = {
-      remaining: activeCards,
-      mastered: []
-    };
-    
-    setBuckets(initialBuckets);
-    startNextRound(initialBuckets);
-  }, [set, settings.studyStarredOnly, starred]); // We don't re-run on shuffle toggle during session
-
-  const startNextRound = (currentBuckets = buckets) => {
-    let newRemaining = [...currentBuckets.remaining];
-    
-    let roundCards = [];
-    
-    if (settings.shuffle) {
-      newRemaining.sort(() => 0.5 - Math.random());
-    }
-
-    const remPick = newRemaining.splice(0, 7);
-    roundCards.push(...remPick);
-
-    if (roundCards.length === 0) {
-      // Completed entirely
-      setQueue([]);
-      return;
-    }
-
-    setQueue(roundCards);
-    setRoundStats({ movedToMastered: 0, incorrect: 0 });
-    setShowRoundSummary(false);
-    prepareQuestion(roundCards[0], set.cards, settings, currentBuckets);
-  };
-
-  const prepareQuestion = (card, allCards, currentSettings = settings, currentBuckets = buckets) => {
-    setCurrentCard(card);
+  const resetAnswer = () => {
     setShowResult(false);
     setSelectedOption(null);
     setWrittenAnswer('');
     setIsFlipped(false);
-
-    let type = 'multipleChoice';
-    const available = [];
-    if (currentSettings.multipleChoice) available.push('multipleChoice');
-    if (currentSettings.written) available.push('written');
-    if (currentSettings.flashcards) available.push('flashcards');
-    
-    if (available.length > 0) {
-        type = available[Math.floor(Math.random() * available.length)];
-    }
-    
-    setQuestionType(type);
-
-    if (type === 'multipleChoice' || available.length === 0) {
-      const wrongCards = allCards.filter(c => c.id !== card.id).sort(() => 0.5 - Math.random()).slice(0, 3);
-      const optionsPool = [card, ...wrongCards].sort(() => 0.5 - Math.random());
-      setOptions(optionsPool);
-    }
   };
-
+  const startNextRound = (nextBuckets = buckets) => {
+    clearTimeout(timerRef.current);
+    timerRef.current = null;
+    resetAnswer();
+    setSession(makeRound(nextBuckets, set.cards, settings));
+  };
+  const toggleStarredFilter = () => {
+    clearTimeout(timerRef.current);
+    timerRef.current = null;
+    const nextSettings = { ...settings, studyStarredOnly: !settings.studyStarredOnly };
+    setSettings(nextSettings);
+    resetAnswer();
+    setSession(makeSession(set.cards, nextSettings, starredIds));
+  };
   const speak = (text, lang) => {
-    if (!settings.audio) return;
+    if (!settings.audio || !window.speechSynthesis) return;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = lang;
     window.speechSynthesis.speak(utterance);
   };
-
   const processResult = (correct) => {
+    if (showResult || timerRef.current !== null) return;
     setShowResult(true);
-    
-    if (settings.audio) {
-      playSound(correct ? 'correct' : 'wrong');
-    }
-    
-    setTimeout(() => {
-      // Use current state to calculate the next state
+    if (settings.audio) playSound(correct ? 'correct' : 'wrong');
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      const card = queue[0];
+      if (!card) return;
       const nextBuckets = {
-        remaining: [...buckets.remaining],
-        mastered: [...buckets.mastered]
+        remaining: correct ? buckets.remaining.filter(item => item.id !== card.id) : buckets.remaining,
+        mastered: correct ? [...buckets.mastered, card] : buckets.mastered
       };
-      
-      let newQueue = [...queue];
-      const card = newQueue.shift();
-      
-      if (correct) {
-        nextBuckets.remaining = nextBuckets.remaining.filter(c => c.id !== card.id);
-        if (!nextBuckets.mastered.some(c => c.id === card.id)) {
-          nextBuckets.mastered.push(card);
-        }
-        
-        setRoundStats(prevStats => ({
-          ...prevStats,
-          movedToMastered: prevStats.movedToMastered + 1
-        }));
-      } else {
-        setRoundStats(prevStats => ({
-          ...prevStats,
-          incorrect: prevStats.incorrect + 1
-        }));
-      }
-      
-      if (!correct) {
-        // Re-add to queue to ask again in this round
-        newQueue.push(card);
-      }
-      
-      // Apply states
-      setBuckets(nextBuckets);
-      setQueue(newQueue);
-      
-      if (newQueue.length > 0) {
-        setTimeout(() => prepareQuestion(newQueue[0], set.cards, settings, nextBuckets), 0);
-      } else {
-        if (nextBuckets.remaining.length === 0) {
-          setShowRoundSummary(false);
-        } else {
-          setShowRoundSummary(true);
-        }
-      }
+      const nextQueue = queue.slice(1);
+      if (!correct) nextQueue.push(card);
+      const next = { buckets: nextBuckets, queue: nextQueue,
+        showRoundSummary: nextQueue.length === 0 && nextBuckets.remaining.length > 0,
+        roundStats: { movedToMastered: roundStats.movedToMastered + Number(correct), incorrect: roundStats.incorrect + Number(!correct) },
+        ...makeQuestion(nextQueue[0], set.cards, settings) };
+      setSession(next);
+      if (correct) onMasteredChange(new Set(nextBuckets.mastered.map(item => item.id)));
+      resetAnswer();
     }, 1500);
   };
-
-  const handleSelect = (option) => {
+  const handleSelect = option => {
     if (showResult) return;
     setSelectedOption(option);
-    const correct = option && option.id === currentCard.id;
-    processResult(correct);
+    processResult(option.id === currentCard.id);
   };
-
-  const handleWrittenSubmit = (e) => {
+  const handleWrittenSubmit = e => {
     e.preventDefault();
-    if (showResult || !writtenAnswer.trim()) return;
-    
-    const correct = writtenAnswer.trim().toLowerCase() === currentCard.term.toLowerCase();
-    processResult(correct);
+    if (!writtenAnswer.trim()) return;
+    processResult(writtenAnswer.trim().toLowerCase() === currentCard.term.trim().toLowerCase());
   };
+  const handleNotSure = () => processResult(false);
 
-  const handleNotSure = () => {
-    if (showResult) return;
-    setShowResult(true);
-    setTimeout(() => {
-      processResult(false); // mark as incorrect
-    }, 500);
-  };
-
-  if (buckets.remaining.length === 0 && !showRoundSummary && queue.length === 0 && currentCard !== null) {
+  if (buckets.remaining.length === 0 && !showRoundSummary && queue.length === 0 && buckets.mastered.length > 0) {
     return (
       <CompletionScreen 
         onBack={onBack} 
-        subtitle="Ви блискуче засвоїли цей набір на 100%!" 
+        subtitle="Ви засвоїли всі картки цієї сесії!"
       />
     );
   }
@@ -240,12 +138,12 @@ function Learn({ set, onBack }) {
           <div className="summary-progress-bars">
             <div className="summary-bar-row">
               <span>Залишилось</span>
-              <div className="bar-bg"><div className="bar-fill bg-gray" style={{width: `${(buckets.remaining.length / set.cards.length)*100}%`}}></div></div>
+              <div className="bar-bg"><div className="bar-fill bg-gray" style={{width: `${(buckets.remaining.length / (buckets.remaining.length + buckets.mastered.length))*100}%`}}></div></div>
               <span>{buckets.remaining.length}</span>
             </div>
             <div className="summary-bar-row">
               <span>Вивчені</span>
-              <div className="bar-bg"><div className="bar-fill bg-green" style={{width: `${(buckets.mastered.length / set.cards.length)*100}%`}}></div></div>
+              <div className="bar-bg"><div className="bar-fill bg-green" style={{width: `${(buckets.mastered.length / (buckets.remaining.length + buckets.mastered.length))*100}%`}}></div></div>
               <span>{buckets.mastered.length}</span>
             </div>
           </div>
@@ -258,9 +156,15 @@ function Learn({ set, onBack }) {
     );
   }
 
-  if (!currentCard) return null;
+  if (!currentCard) return (
+    <div className="mode-container learn-mode">
+      <button className="btn secondary" onClick={onBack}>Назад</button>
+      <p className="empty-state">Немає позначених карток для навчання.</p>
+      <button className="btn primary" onClick={toggleStarredFilter}>Вивчати всі картки</button>
+    </div>
+  );
 
-  const totalCards = set.cards.length;
+  const totalCards = buckets.remaining.length + buckets.mastered.length;
   const progressPercent = (buckets.mastered.length / totalCards) * 100;
 
   function renderSettings() {
@@ -275,7 +179,7 @@ function Learn({ set, onBack }) {
           </button>
           <button 
             className={`popover-action-btn ${settings.studyStarredOnly ? 'active' : ''}`}
-            onClick={() => setSettings({...settings, studyStarredOnly: !settings.studyStarredOnly})}
+            onClick={toggleStarredFilter}
           >
             <Star size={18} fill={settings.studyStarredOnly ? "currentColor" : "none"} />
           </button>
@@ -399,7 +303,7 @@ function Learn({ set, onBack }) {
             <form onSubmit={handleWrittenSubmit} className="learn-written-form">
               <input 
                 type="text" 
-                className={`learn-written-input ${showResult ? (writtenAnswer.trim().toLowerCase() === currentCard.term.toLowerCase() ? 'correct' : 'wrong') : ''}`}
+                className={`learn-written-input ${showResult ? (writtenAnswer.trim().toLowerCase() === currentCard.term.trim().toLowerCase() ? 'correct' : 'wrong') : ''}`}
                 value={writtenAnswer}
                 onChange={(e) => setWrittenAnswer(e.target.value)}
                 placeholder="Введіть англійською..."
@@ -436,10 +340,10 @@ function Learn({ set, onBack }) {
               <div className="flashcard-actions mt-4">
                 <h4 className="mb-3 text-center">Ви знали це?</h4>
                 <div className="progress-controls justify-center">
-                  <button className="control-btn learning-btn" onClick={() => processResult(false)}>
+                  <button className="control-btn learning-btn" disabled={showResult} onClick={() => processResult(false)}>
                     Вивчаю
                   </button>
-                  <button className="control-btn known-btn" onClick={() => processResult(true)}>
+                  <button className="control-btn known-btn" disabled={showResult} onClick={() => processResult(true)}>
                     Знаю
                   </button>
                 </div>

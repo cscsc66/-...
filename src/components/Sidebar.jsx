@@ -1,5 +1,4 @@
-import React from 'react';
-import { Home as HomeIcon, Library, PlaySquare, Folder, Plus } from 'lucide-react';
+import { Home as HomeIcon, Library, PlaySquare, Plus } from 'lucide-react';
 
 function Sidebar({ navigate, currentView }) {
   return (

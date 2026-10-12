@@ -1,1 +1,22 @@
-/* Empty file to override default Vite styles */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+button, input, select { font: inherit; }
+
+button, [role="button"], .set-card, .mode-card, .match-tile, .flashcard {
+  touch-action: manipulation;
+}
+
+button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid #c83c66;
+  outline-offset: 3px;
+}
+
+img, svg { max-width: 100%; }

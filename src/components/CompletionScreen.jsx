@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { playSound } from '../utils/sound';
 
@@ -6,11 +6,12 @@ function CompletionScreen({ onBack, subtitle, primaryAction, primaryLabel }) {
   useEffect(() => {
     // Play a happy sound
     playSound('correct');
-    setTimeout(() => playSound('correct'), 500);
+    const timer = setTimeout(() => playSound('correct'), 500);
+    return () => clearTimeout(timer);
   }, []);
 
   const screenContent = (
-    <div className="meme-completed-screen" style={{position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 99999}}>
+    <div className="meme-completed-screen">
       <h1 className="meme-title">ХАЙПУЄ ПЛЄСЄНЬ 🍄</h1>
       {subtitle && (
         <p className="meme-subtitle">

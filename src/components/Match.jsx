@@ -1,20 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import CompletionScreen from './CompletionScreen';
 import { playSound } from '../utils/sound';
 
+function makeTiles(cards) {
+  return [...cards].sort(() => 0.5 - Math.random()).slice(0, 6).flatMap(card => [
+    { id: 'term-' + card.id, cardId: card.id, text: card.term, type: 'term' },
+    { id: 'def-' + card.id, cardId: card.id, text: card.definition, type: 'def' }
+  ]).sort(() => 0.5 - Math.random());
+}
+
 function Match({ set, onBack }) {
-  const [tiles, setTiles] = useState([]);
+  const wrongTimer = useRef(null);
+  useEffect(() => () => clearTimeout(wrongTimer.current), []);
+  const [tiles, setTiles] = useState(() => makeTiles(set.cards));
   const [selectedTile, setSelectedTile] = useState(null);
   const [matchedPairs, setMatchedPairs] = useState(new Set());
   const [wrongPair, setWrongPair] = useState(null);
   const [time, setTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const [isFinished, setIsFinished] = useState(false);
-
-  useEffect(() => {
-    startGame();
-  }, [set]);
 
   useEffect(() => {
     let interval;
@@ -27,16 +32,8 @@ function Match({ set, onBack }) {
   }, [isPlaying]);
 
   const startGame = () => {
-    // Take max 6 random pairs for the game
-    const selectedCards = [...set.cards].sort(() => 0.5 - Math.random()).slice(0, 6);
-    
-    let generatedTiles = [];
-    selectedCards.forEach(card => {
-      generatedTiles.push({ id: `term-${card.id}`, cardId: card.id, text: card.term, type: 'term' });
-      generatedTiles.push({ id: `def-${card.id}`, cardId: card.id, text: card.definition, type: 'def' });
-    });
-
-    setTiles(generatedTiles.sort(() => 0.5 - Math.random()));
+    clearTimeout(wrongTimer.current);
+    setTiles(makeTiles(set.cards));
     setMatchedPairs(new Set());
     setSelectedTile(null);
     setWrongPair(null);
@@ -72,7 +69,7 @@ function Match({ set, onBack }) {
         // Wrong match
         playSound('wrong');
         setWrongPair([selectedTile.id, tile.id]);
-        setTimeout(() => {
+        wrongTimer.current = setTimeout(() => {
           setWrongPair(null);
           setSelectedTile(null);
         }, 800);

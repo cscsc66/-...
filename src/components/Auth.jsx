@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { readStored, writeStored, isRecord } from '../utils/storage';
+import { hashPassword, verifyPassword } from '../utils/password';
 import { UserPlus, LogIn, X } from 'lucide-react';
 
 function Auth({ onLogin, onCancel }) {
@@ -6,34 +8,45 @@ function Auth({ onLogin, onCancel }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setError('');
-
-    if (!username.trim() || !password.trim()) {
+    const login = username.trim();
+    if (!login || !password.trim()) {
       setError('Заповніть всі поля');
       return;
     }
-
-    const usersStr = localStorage.getItem('marusya-users');
-    const users = usersStr ? JSON.parse(usersStr) : {};
-
-    if (isLogin) {
-      if (users[username] && users[username].password === password) {
-        onLogin({ username, name: users[username].name || username });
+    setIsSubmitting(true);
+    try {
+      const users = readStored('marusya-users', {}, isRecord);
+      const user = Object.hasOwn(users, login) && isRecord(users[login]) ? users[login] : null;
+      if (isLogin) {
+        if (!user || !await verifyPassword(password, user)) {
+          setError('Невірний логін або пароль');
+          return;
+        }
+        if (typeof user.password === 'string') {
+          const migrated = { ...user, ...await hashPassword(password) };
+          delete migrated.password;
+          if (!writeStored('marusya-users', { ...users, [login]: migrated })) throw new Error('storage');
+        }
+        onLogin({ username: login, name: typeof user.name === 'string' ? user.name : login });
       } else {
-        setError('Невірний логін або пароль');
+        if (user) {
+          setError('Користувач з таким логіном вже існує');
+          return;
+        }
+        const newUser = { username: login, name: login, createdAt: new Date().toISOString(), ...await hashPassword(password) };
+        if (!writeStored('marusya-users', { ...users, [login]: newUser })) throw new Error('storage');
+        onLogin({ username: login, name: login });
       }
-    } else {
-      if (users[username]) {
-        setError('Користувач з таким логіном вже існує');
-      } else {
-        const newUser = { username, password, name: username, createdAt: new Date().toISOString() };
-        users[username] = newUser;
-        localStorage.setItem('marusya-users', JSON.stringify(users));
-        onLogin({ username, name: username });
-      }
+    } catch {
+      setError('Не вдалося зберегти або перевірити облікові дані. Перевірте доступ до сховища та використовуйте HTTPS або localhost.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -63,14 +76,14 @@ function Auth({ onLogin, onCancel }) {
             />
           </div>
           
-          <button type="submit" className="btn primary full-width">
+          <button disabled={isSubmitting} type="submit" className="btn primary full-width">
             {isLogin ? <><LogIn size={20} /> Увійти</> : <><UserPlus size={20} /> Зареєструватися</>}
           </button>
         </form>
 
         <p className="auth-toggle">
           {isLogin ? 'Немає акаунту?' : 'Вже є акаунт?'}
-          <button className="btn-text" onClick={() => { setIsLogin(!isLogin); setError(''); }}>
+          <button className="btn-text" disabled={isSubmitting} onClick={() => { setIsLogin(!isLogin); setError(''); }}>
             {isLogin ? 'Створити' : 'Увійти'}
           </button>
         </p>

@@ -1,7 +1,6 @@
-import React from 'react';
 import { PlusCircle, Book, CheckCircle } from 'lucide-react';
 
-function Home({ sets, navigate, setEditingSetId, currentUser }) {
+function Home({ sets, navigate, setEditingSetId, currentUser, study }) {
   const userSets = currentUser 
     ? sets.filter(s => s.authorId === currentUser.username)
     : sets;
@@ -27,8 +26,8 @@ function Home({ sets, navigate, setEditingSetId, currentUser }) {
           {userSets.length === 0 ? (
             <p className="empty-state">У вас ще немає наборів. Створіть перший!</p>
           ) : (
-            userSets.map((set, index) => {
-              const progress = index === 0 ? 85 : index === 1 ? 100 : Math.floor(Math.random() * 50);
+            userSets.map((set) => {
+              const progress = Math.round(set.cards.filter(card => study[set.id]?.mastered.includes(card.id)).length / set.cards.length * 100);
               
               return (
                 <div key={set.id} className="set-card" onClick={() => navigate('set-view', set.id)}>

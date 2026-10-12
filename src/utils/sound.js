@@ -4,6 +4,7 @@ export const playSound = (type) => {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
     const ctx = new AudioContext();
+    setTimeout(() => { void ctx.close().catch(() => {}); }, 1000);
     
     if (type === 'correct') {
       // Pleasant chime (arpeggio)

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, X, CheckCircle, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { X, CheckCircle, XCircle } from 'lucide-react';
+import CompletionScreen from './CompletionScreen';
 import { playSound } from '../utils/sound';
 
-function Test({ set, onBack }) {
+function Test({ set, onBack, onMasteredChange }) {
   // Setup State
   const [isSetup, setIsSetup] = useState(true);
   const [questionCount, setQuestionCount] = useState(Math.min(20, set.cards.length));
@@ -77,8 +78,10 @@ function Test({ set, onBack }) {
 
   const submitTest = () => {
     let correctCount = 0;
+    const masteredIds = new Set();
     questions.forEach(q => {
       const ans = answers[q.id];
+      const previousCount = correctCount;
       if (q.type === 'multipleChoice') {
         if (ans === q.id) correctCount++;
       } else if (q.type === 'trueFalse') {
@@ -86,7 +89,9 @@ function Test({ set, onBack }) {
       } else if (q.type === 'written') {
         if (ans && ans.toLowerCase().trim() === q.term.toLowerCase().trim()) correctCount++;
       }
+      if (correctCount > previousCount) masteredIds.add(q.id);
     });
+    onMasteredChange(masteredIds);
     const finalScore = Math.round((correctCount / questions.length) * 100);
     setScore(finalScore);
     setIsSubmitted(true);

@@ -1,4 +1,3 @@
-import React from 'react';
 import { User, LogOut, Book, ArrowLeft } from 'lucide-react';
 
 function Profile({ user, sets, onLogout, navigate }) {

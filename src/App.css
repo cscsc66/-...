@@ -11,6 +11,7 @@ body {
   background: #fff0f3;
   color: #333;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* App Layout */
@@ -19,6 +20,7 @@ body {
   margin: 0 auto;
   padding: 2rem;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -45,8 +47,8 @@ body {
 
 .content-area {
   flex: 1;
+  min-width: 0;
   background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
   border-radius: 24px;
   padding: 2rem;
   box-shadow: 0 10px 30px rgba(251, 111, 146, 0.15);
@@ -174,7 +176,7 @@ h3 { color: #ff8fab; font-weight: 700; margin-bottom: 0.5rem; }
 
 /* Home */
 .home-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-.sets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+.sets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 1.5rem; }
 .set-card {
   background: white;
   padding: 1.5rem;
@@ -219,7 +221,7 @@ h3 { color: #ff8fab; font-weight: 700; margin-bottom: 0.5rem; }
 /* Set View */
 .set-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
 .set-actions { display: flex; gap: 0.5rem; }
-.modes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
+.modes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
 .mode-card {
   background: white;
   padding: 1.5rem;
@@ -511,7 +513,9 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background: radial-gradient(circle, #fb6f92, #ffb3c6);
-  z-index: 9999;
+  z-index: 99999;
+  height: 100%;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -567,69 +571,186 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
   100% { transform: scale(1.1) translateY(-20px); }
 }
 
-/* Responsiveness */
+/* Flexible content and viewport-sized overlays. */
+.main-header { gap: 1rem; }
+.header-logo { position: static; transform: none; flex: 1; min-width: 0; text-align: center; }
+.header-actions { flex-shrink: 0; max-width: 40%; }
+.card-face { overflow-y: auto; }
+:is(.set-card, .mode-card, .editor-card, .input-group, .term-term, .term-def,
+    .profile-info, .stat-details, .topbar-left, .topbar-center, .toolbar-center,
+    .setting-info, .learn-option-box, .option-text, .test-option-btn, .match-tile) { min-width: 0; }
+:is(h1, h2, h3, h4, p, button, .card-text, .card-hint, .term-term, .term-def,
+    .set-title-small, .option-text, .match-tile, .user-name) { overflow-wrap: anywhere; }
+:is(.input-group input, .editor-info-form input, .learn-written-input) { width: 100%; min-width: 0; }
+:is(.mode-header, .setting-row, .settings-toggle-row) { display: flex; align-items: center; gap: 1rem; }
+.mode-header { flex-wrap: wrap; margin-bottom: 1.5rem; }
+.mode-header h2 { margin: 0; }
+.profile-avatar, .option-number, .question-number, .toggle-switch, button > svg { flex-shrink: 0; }
+.settings-modal-overlay, .auth-container {
+  height: 100%; height: 100dvh;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.settings-modal, .auth-card { min-width: 0; max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+.settings-popover { max-width: calc(100vw - 4rem); max-height: 70vh; max-height: 70dvh; overflow-y: auto; overscroll-behavior: contain; }
+.learn-progress-area { padding-inline: 1rem; }
+.test-feedback-icon { position: static; display: flex; justify-content: flex-end; margin-top: 1rem; }
+
+/* Layout follows the available width rather than a particular phone model. */
 @media (max-width: 768px) {
-  /* Layout Adjustments */
-  .app-layout { padding: 1rem 0.5rem; }
-  .content-area { padding: 1.5rem 1rem; border-radius: 16px; }
-  
-  .main-header { flex-direction: column; justify-content: center; align-items: center; gap: 1rem; padding: 0.5rem 0; margin-bottom: 1.5rem; }
-  .header-logo { position: static; transform: none; font-size: 1.8rem; text-align: center; margin-bottom: 0.5rem; }
-  .header-actions { justify-content: center; width: 100%; display: flex; }
-  
-  .home-header { flex-direction: column; text-align: center; gap: 1rem; align-items: stretch; }
-  .sets-grid { grid-template-columns: 1fr; }
-  
-  .editor-header { flex-direction: column; text-align: center; gap: 1rem; }
-  .editor-actions { width: 100%; flex-direction: column; gap: 0.5rem; }
-  .editor-actions button { width: 100%; justify-content: center; }
+  .app-layout {
+    padding: max(0.75rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right))
+      max(1rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+  }
+  .content-area { padding: clamp(0.75rem, 3vw, 1.5rem); border-radius: 16px; }
+  .main-header { flex-direction: column; justify-content: center; gap: 0.75rem; padding: 0.5rem 0; margin-bottom: 1rem; }
+  .header-logo { position: static; transform: none; font-size: clamp(1.3rem, 5vw, 1.8rem); text-align: center; width: 100%; }
+  .header-actions { justify-content: center; width: 100%; max-width: 100%; flex-wrap: wrap; }
+  .user-profile-btn { max-width: 100%; min-height: 44px; }
+  :is(.home-header, .editor-header, .set-header) { flex-direction: column; text-align: center; gap: 0.75rem; align-items: stretch; margin-bottom: 1.5rem; }
+  :is(.home-header, .editor-header, .set-header) h2 { margin-bottom: 0; }
+  .sets-grid { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .set-card, .editor-card { padding: 1rem; }
+  .editor-actions { width: 100%; flex-wrap: wrap; gap: 0.5rem; }
+  .editor-actions .btn { flex: 1 1 120px; }
   .editor-card-inputs { flex-direction: column; gap: 1rem; }
-  
-  .set-header { flex-direction: column; text-align: center; gap: 1rem; align-items: stretch; }
+  .editor-info-form input { padding: 0.75rem; }
+  .input-title { font-size: 1.2rem !important; }
+  .editor-footer .btn { width: 100%; }
   .set-actions { width: 100%; justify-content: center; flex-wrap: wrap; }
-  .modes-grid { grid-template-columns: 1fr; gap: 1rem; }
-  
-  /* Modes adjustments */
-  .learn-options-grid { grid-template-columns: 1fr; }
-  .test-options-grid { grid-template-columns: 1fr; }
-  .tf-grid { grid-template-columns: 1fr; }
-  .match-grid { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
-  
-  .term-row { flex-direction: column; gap: 0.5rem; text-align: center; }
-  .term-divider { width: 100%; height: 2px; margin: 0.5rem 0; }
-  
-  .profile-card { flex-direction: column; text-align: center; gap: 1rem; }
-  .profile-stats { display: flex; flex-direction: column; gap: 1rem; align-items: stretch; }
-  .stat-card { max-width: 100%; width: 100%; justify-content: center; }
-  
-  .auth-card { padding: 1.5rem; margin: 1rem; }
-  
-  /* Meme Animation Adjustments */
-  .meme-title { font-size: clamp(2rem, 12vw, 3.5rem); margin-bottom: 0.5rem; }
-  .meme-subtitle { font-size: 1.1rem; padding: 0 1rem; }
-  .meme-actions { flex-direction: column; width: 100%; padding: 0 1.5rem; }
+  .modes-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+  .mode-card { padding: 1rem 0.75rem; }
+  .mode-icon { width: 32px; height: 32px; margin-bottom: 0.5rem; }
+  .term-row { flex-direction: column; gap: 0.5rem; padding: 1rem; }
+  .term-divider { width: 100%; height: 2px; margin: 0; }
+
+  :is(.btn, .btn.small, .btn.large, .btn-back, .btn-text, .btn-icon, .popover-action-btn, .not-sure-btn) { min-height: 44px; }
+  .btn { justify-content: center; text-align: center; max-width: 100%; padding: 0.75rem 1rem; }
+  .btn.large { font-size: 1.05rem; padding: 0.875rem 1rem; }
+  .btn-icon { min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .toggle-switch { width: 44px; height: 44px; flex: 0 0 44px; }
+  .toggle-slider { top: 10px; bottom: 10px; }
+  .toggle-switch:focus-within .toggle-slider { outline: 3px solid #c83c66; outline-offset: 3px; }
+  input, select { font-size: max(1rem, 16px); }
+
+  .flashcards-topbar { flex-wrap: wrap; gap: 0.5rem; padding: 0.75rem; }
+  .topbar-left { flex: 1 1 100px; }
+  .topbar-right { flex: 0 0 auto; gap: 0.25rem; }
+  .topbar-center { order: 3; flex: 1 1 100%; gap: 0.25rem; }
+  .topbar-center .progress-text { margin-bottom: 0; }
+  .set-title-small { text-align: center; }
+  .flashcard-container { height: clamp(280px, 52vh, 450px); height: clamp(280px, 52dvh, 450px); margin-bottom: 1rem; }
+  .flashcard-container.compact { height: clamp(220px, 36vh, 300px); height: clamp(220px, 36dvh, 300px); }
+  .card-face { padding: 1rem; justify-content: flex-start; overflow-y: auto; overscroll-behavior: contain; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+  .card-face > * { flex-shrink: 0; }
+  .card-top-actions { position: static; width: 100%; align-items: flex-start; gap: 0.25rem; margin-bottom: 0.75rem; }
+  .card-top-right { gap: 0; }
+  .hint-btn { margin-left: 0; padding: 0.5rem 0.25rem; text-align: left; font-size: 0.85rem; }
+  .card-text { font-size: clamp(1.4rem, 7vw, 2.5rem); max-width: 100%; margin-block: auto; }
+  .card-hint { font-size: 1rem; margin-top: 0.75rem; }
+  .flashcards-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.75rem; padding: 0.75rem; }
+  .toolbar-left { grid-column: 1 / -1; justify-content: center; }
+  .toolbar-center, .toolbar-right { width: 100%; }
+  .toolbar-right { gap: 0.5rem; }
+  .controls, .progress-controls { gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+  .learning-btn, .known-btn { padding: 0 1rem; font-size: 1rem; }
+  .toggle-switch-compact { justify-content: space-between; gap: 1rem; }
+
+  .settings-modal, .auth-card { padding: 1.25rem; border-radius: 16px; margin: 0; }
+  .settings-header { margin-bottom: 1rem; padding-bottom: 0.75rem; }
+  .setting-row { flex-wrap: wrap; gap: 0.5rem 0.75rem; }
+  .setting-info { flex: 1 1 150px; }
+  .settings-select { max-width: 100%; min-width: 0; min-height: 44px; }
+  .settings-popover { top: calc(100% + 0.5rem); width: 320px; }
+  .settings-popover-body { padding: 1rem; gap: 0.75rem; }
+  .settings-toggle-row { gap: 0.75rem; }
+  .auth-card h2 { padding-inline: 1.5rem; }
+  .auth-toggle .btn-text { margin-left: 0.25rem; }
+
+  .learn-card-container { padding: 1rem; }
+  .learn-question-text { font-size: clamp(1.2rem, 5vw, 1.8rem); margin-bottom: 1.5rem; }
+  .learn-card-header { margin-bottom: 1rem; }
+  .learn-options-grid, .test-options-grid { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+  .learn-option-box, .test-option-btn { padding: 0.875rem; gap: 0.75rem; min-height: 48px; }
+  .learn-written-form { flex-direction: column; gap: 0.75rem; }
+  .learn-written-input { font-size: max(1rem, 16px); padding: 0.875rem; }
+  .learn-correct-answer { padding: 1rem; font-size: 1rem; }
+  .learn-correct-answer strong { font-size: 1.2rem; }
+  .learn-card-footer { margin-top: 1rem; padding-top: 0; }
+  .round-summary-card, .test-setup-card, .test-score-card, .test-question { padding: 1.25rem; }
+  .round-summary-card h2, .test-score-card h3 { font-size: clamp(1.3rem, 6vw, 2rem); }
+  .summary-stats { gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .summary-subtitle { margin-bottom: 1.5rem; }
+  .stat-value { font-size: 2rem; }
+  .stat-label { font-size: 0.85rem; }
+  .summary-bar-row { gap: 0.5rem; }
+  .bar-bg { min-width: 0; }
+  .test-setup-card, .test-score-card { margin: 1rem auto; }
+  .test-questions { gap: 1rem; padding-bottom: 1rem; }
+  .test-question-header { gap: 0.5rem; margin-bottom: 1rem; }
+  .question-type-badge { font-size: 0.75rem; text-align: right; padding: 0.4rem 0.5rem; }
+  .question-prompt { font-size: 1.25rem; margin-bottom: 1rem; }
+  .tf-prompt, .test-feedback-text { font-size: 1rem; padding: 0.75rem; }
+  .test-input { padding: 0.875rem; font-size: max(1rem, 16px); }
+  .submit-test-btn { width: 100%; padding: 1rem; font-size: 1.1rem; }
+
+  .match-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+  .match-tile { padding: 1rem 0.5rem; min-height: 88px; font-size: 1rem; }
+  .match-tile.selected { transform: none; }
+  .timer { font-size: 1.1rem; padding: 0.5rem 0.75rem; }
+  .profile-card { flex-direction: column; text-align: center; gap: 1rem; padding: 1.25rem; }
+  .profile-info { width: 100%; }
+  .profile-info h3 { font-size: 1.5rem; }
+  .profile-card .btn { width: 100%; }
+  .profile-stats { margin-bottom: 1.5rem; }
+  .stat-card { max-width: 100%; width: 100%; padding: 1rem; gap: 1rem; }
+  .empty-state { padding: 1.5rem 1rem; }
+
+  .meme-completed-screen {
+    padding: max(2rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+      max(1.5rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+    justify-content: flex-start;
+  }
+  .meme-completed-screen > * { flex-shrink: 0; }
+  .meme-title { font-size: clamp(1.8rem, 10vw, 3.5rem); max-width: 100%; margin-top: auto; animation-name: textBounceMobile; }
+  .meme-subtitle { font-size: 1.1rem; }
+  .meme-actions { flex-direction: column; width: 100%; max-width: 440px; margin-bottom: auto; }
   .meme-actions .btn { width: 100%; justify-content: center; }
 }
 
-/* Landscape and Short Screen Optimizations for Meme Screen */
-@media (max-height: 600px) and (orientation: landscape), (max-height: 500px) {
-  .meme-completed-screen {
-    justify-content: flex-start;
-    padding-top: 2rem;
-  }
-  .meme-title {
-    font-size: clamp(1.5rem, 8vw, 3rem);
-    animation: textBounceSmall 1s infinite alternate cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  }
-  .meme-subtitle {
-    font-size: 1.2rem;
-    margin-top: 0.5rem;
-  }
-  .meme-actions {
-    margin-top: 1rem;
-  }
+@media (max-width: 480px) {
+  .flashcards-toolbar { grid-template-columns: minmax(0, 1fr); }
+  .toolbar-right { justify-content: center; }
+  .progress-controls { width: 100%; }
+  .progress-controls .control-btn { flex: 1; }
+  .setting-row:has(.settings-select) { flex-direction: column; align-items: stretch; }
+  .setting-row:has(.settings-select) .setting-info { flex-basis: auto; }
 }
-@keyframes textBounceSmall {
-  0% { transform: scale(1) translateY(0); }
-  100% { transform: scale(1.05) translateY(-10px); }
+
+@media (max-width: 360px) {
+  .modes-grid { grid-template-columns: minmax(0, 1fr); }
+  .editor-actions { flex-direction: column; }
+  .editor-actions .btn { flex-basis: auto; }
+  .card-top-actions { flex-wrap: wrap; }
+  .card-top-right { margin-left: auto; }
+  .round-summary-card, .test-setup-card, .test-score-card, .test-question { padding: 1rem; }
+}
+
+@media (max-height: 600px) {
+  .flashcard-container { height: 280px; }
+  .flashcard-container.compact { height: 220px; }
+  .meme-completed-screen { justify-content: flex-start; }
+  .meme-title { font-size: clamp(1.5rem, 8vw, 3rem); }
+  .meme-subtitle { font-size: 1.1rem; margin-top: 0.5rem; }
+  .meme-actions { margin-top: 1rem; }
+}
+
+@keyframes textBounceMobile {
+  from { transform: translateY(0); }
+  to { transform: translateY(-8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }

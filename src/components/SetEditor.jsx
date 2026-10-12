@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Trash2, Plus, Save, X } from 'lucide-react';
 
 function SetEditor({ initialSet, onSave, onCancel }) {
@@ -7,7 +7,7 @@ function SetEditor({ initialSet, onSave, onCancel }) {
   const [cards, setCards] = useState(initialSet?.cards || [{ id: 't1', term: '', definition: '' }, { id: 't2', term: '', definition: '' }]);
 
   const addCard = () => {
-    setCards([...cards, { id: Date.now().toString(), term: '', definition: '' }]);
+    setCards([...cards, { id: crypto.randomUUID(), term: '', definition: '' }]);
   };
 
   const updateCard = (id, field, value) => {
@@ -34,6 +34,7 @@ function SetEditor({ initialSet, onSave, onCancel }) {
     }
     
     onSave({
+      ...initialSet,
       id: initialSet?.id,
       title: title.trim(),
       description: description.trim(),

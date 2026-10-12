@@ -1,4 +1,3 @@
-import React from 'react';
 import { Play, Brain, GraduationCap, Zap, Edit2, Trash2 } from 'lucide-react';
 
 function SetView({ set, navigate, onEdit, onDelete }) {

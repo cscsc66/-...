@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   ChevronRight, ChevronLeft, Volume2, X, Settings, 
-  Play, Pause, Shuffle, Star, Lightbulb, 
-  Check, X as XIcon
+  Play, Pause, Shuffle, Star, Lightbulb
 } from 'lucide-react';
 
 import CompletionScreen from './CompletionScreen';
 
-function Flashcards({ set, onBack }) {
+function Flashcards({ set, onBack, starredIds, onStarredChange, onMasteredChange, masteredIds }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -22,84 +21,73 @@ function Flashcards({ set, onBack }) {
   });
 
   // Card States
-  const [starred, setStarred] = useState(new Set());
-  const [known, setKnown] = useState(new Set());
+  const starred = useMemo(() => new Set(starredIds), [starredIds]);
+  const [known, setKnown] = useState(() => new Set(masteredIds));
   const [learning, setLearning] = useState(new Set());
   
   // Playback
   const [isPlaying, setIsPlaying] = useState(false);
   const [isShuffled, setIsShuffled] = useState(false);
-  const [cardsOrder, setCardsOrder] = useState([]);
+  const [orderedCards, setOrderedCards] = useState(set.cards);
+  const cardsOrder = useMemo(() => settings.studyStarredOnly ? orderedCards.filter(card => starred.has(card.id)) : orderedCards, [orderedCards, settings.studyStarredOnly, starred]);
   
   const [showHint, setShowHint] = useState(false);
 
-  // Initialize cards order
-  useEffect(() => {
-    let activeCards = [...set.cards];
-    
-    if (settings.studyStarredOnly && starred.size > 0) {
-      activeCards = activeCards.filter(c => starred.has(c.id));
-    }
-    
-    if (isShuffled) {
-      activeCards.sort(() => 0.5 - Math.random());
-    }
-    
-    setCardsOrder(activeCards);
+  const resetPosition = () => {
     setCurrentIndex(0);
     setIsFlipped(false);
     setShowHint(false);
-  }, [set.cards, isShuffled, settings.studyStarredOnly, starred]);
-
-  // Autoplay
-  useEffect(() => {
-    let interval;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        if (!isFlipped) {
-          setIsFlipped(true);
-        } else {
-          nextCard();
-        }
-      }, 3000);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, isFlipped, currentIndex, cardsOrder.length]);
-
+    setIsCompleted(false);
+    setIsPlaying(false);
+  };
+  const toggleFilter = () => {
+    resetPosition();
+    setSettings(previous => ({ ...previous, studyStarredOnly: !previous.studyStarredOnly }));
+  };
+  const toggleShuffle = () => {
+    resetPosition();
+    setIsShuffled(!isShuffled);
+    setOrderedCards(isShuffled ? set.cards : [...set.cards].sort(() => 0.5 - Math.random()));
+  };
   const toggleStar = (e, id) => {
     e.stopPropagation();
-    const newStarred = new Set(starred);
-    if (newStarred.has(id)) newStarred.delete(id);
-    else newStarred.add(id);
-    setStarred(newStarred);
+    const next = new Set(starred);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    if (settings.studyStarredOnly) resetPosition();
+    onStarredChange(next);
   };
-
-  const nextCard = () => {
+  const nextCard = useCallback(() => {
     setIsFlipped(false);
     setShowHint(false);
-    setTimeout(() => {
-      setCurrentIndex((prev) => {
-        if (prev === cardsOrder.length - 1) {
-          setIsCompleted(true);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, 150);
-  };
-
+    if (currentIndex >= cardsOrder.length - 1) {
+      setIsCompleted(true);
+      setIsPlaying(false);
+    } else {
+      setCurrentIndex(index => index + 1);
+    }
+  }, [currentIndex, cardsOrder.length]);
   const prevCard = () => {
     setIsFlipped(false);
     setShowHint(false);
-    setTimeout(() => {
-      setCurrentIndex((prev) => (prev - 1 + cardsOrder.length) % cardsOrder.length);
-    }, 150);
+    setCurrentIndex(index => (index - 1 + cardsOrder.length) % cardsOrder.length);
   };
+  useEffect(() => {
+    if (!isPlaying || isCompleted || cardsOrder.length === 0) return;
+    const timer = setInterval(() => {
+      if (!isFlipped) setIsFlipped(true);
+      else nextCard();
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [isPlaying, isCompleted, isFlipped, cardsOrder.length, nextCard]);
 
   const markKnown = (e) => {
     e.stopPropagation();
     const currentId = cardsOrder[currentIndex].id;
-    setKnown(new Set(known).add(currentId));
+    const next = new Set(known).add(currentId);
+    setKnown(next);
+    setLearning(previous => new Set([...previous].filter(id => id !== currentId)));
+    onMasteredChange(next);
     nextCard();
   };
 
@@ -107,10 +95,15 @@ function Flashcards({ set, onBack }) {
     e.stopPropagation();
     const currentId = cardsOrder[currentIndex].id;
     setLearning(new Set(learning).add(currentId));
+    const next = new Set([...known].filter(id => id !== currentId));
+    setKnown(next);
+    onMasteredChange(next);
     nextCard();
   };
 
   const restart = () => {
+    resetPosition();
+    onMasteredChange(new Set());
     setKnown(new Set());
     setLearning(new Set());
     setCurrentIndex(0);
@@ -120,7 +113,7 @@ function Flashcards({ set, onBack }) {
   };
 
   const speak = (text) => {
-    if (!settings.ttsEnabled) return;
+    if (!settings.ttsEnabled || !window.speechSynthesis) return;
     const utterance = new SpeechSynthesisUtterance(text);
     if (/[a-zA-Z]/.test(text)) utterance.lang = 'en-US';
     else utterance.lang = 'uk-UA';
@@ -191,7 +184,7 @@ function Flashcards({ set, onBack }) {
                 <strong>Вивчати лише терміни із ★</strong>
               </div>
               <label className="toggle-switch">
-                <input type="checkbox" checked={settings.studyStarredOnly} onChange={e => setSettings({...settings, studyStarredOnly: e.target.checked})} />
+                <input type="checkbox" checked={settings.studyStarredOnly} onChange={toggleFilter} />
                 <span className="toggle-slider"></span>
               </label>
             </div>
@@ -316,7 +309,7 @@ function Flashcards({ set, onBack }) {
             <button className={`btn-icon-circle ${isPlaying ? 'active' : ''}`} onClick={() => setIsPlaying(!isPlaying)}>
               {isPlaying ? <Pause size={20}/> : <Play size={20}/>}
             </button>
-            <button className={`btn-icon-circle ${isShuffled ? 'active' : ''}`} onClick={() => setIsShuffled(!isShuffled)}>
+            <button className={`btn-icon-circle ${isShuffled ? 'active' : ''}`} onClick={toggleShuffle}>
               <Shuffle size={20}/>
             </button>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Home from './components/Home';
 import SetEditor from './components/SetEditor';
 import SetView from './components/SetView';
@@ -10,6 +10,7 @@ import Auth from './components/Auth';
 import Profile from './components/Profile';
 import { UserCircle } from 'lucide-react';
 import './App.css';
+import { readStored, writeStored, isRecord, isSets, isStudyData } from './utils/storage';
 
 const defaultSets = [
   {
@@ -33,15 +34,29 @@ const defaultSets = [
 ];
 
 function App() {
-  const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('marusya-current-user');
-    return saved ? JSON.parse(saved) : null;
-  });
-
-  const [sets, setSets] = useState(() => {
-    const saved = localStorage.getItem('marusya-sets');
-    return saved ? JSON.parse(saved) : defaultSets;
-  });
+  const [currentUser, setCurrentUser] = useState(() => readStored('marusya-current-user', null,
+    value => isRecord(value) && typeof value.username === 'string' && typeof value.name === 'string'));
+  const [sets, setSets] = useState(() => readStored('marusya-sets', defaultSets, isSets));
+  const studyKey = 'marusya-study-' + (currentUser ? 'user-' + currentUser.username : 'guest');
+  const [studyCache, setStudyCache] = useState({});
+  const study = studyCache[studyKey] || readStored(studyKey, {}, isStudyData);
+  const updateStudy = (setId, field, ids, merge = false) => {
+    setStudyCache(previous => {
+      const data = previous[studyKey] || readStored(studyKey, {}, isStudyData);
+      const previousIds = merge ? data[setId]?.[field] || [] : [];
+      const next = {
+        ...data,
+        [setId]: {
+          starred: [], mastered: [], ...data[setId],
+          [field]: [...new Set([...previousIds, ...ids])],
+        },
+      };
+      return { ...previous, [studyKey]: next };
+    });
+  };
+  useEffect(() => {
+    if (studyCache[studyKey]) writeStored(studyKey, studyCache[studyKey]);
+  }, [studyCache, studyKey]);
 
   const [currentView, setCurrentView] = useState('home'); // home, library, set-view, editor, flashcards, learn, test, match, profile
   const [showAuth, setShowAuth] = useState(false);
@@ -49,15 +64,11 @@ function App() {
   const [editingSetId, setEditingSetId] = useState(null);
 
   useEffect(() => {
-    localStorage.setItem('marusya-sets', JSON.stringify(sets));
+    writeStored('marusya-sets', sets);
   }, [sets]);
 
   useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('marusya-current-user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('marusya-current-user');
-    }
+    writeStored('marusya-current-user', currentUser);
   }, [currentUser]);
 
   const navigate = (view, setId = null) => {
@@ -76,21 +87,17 @@ function App() {
   };
 
   const saveSet = (set) => {
-    const setWithAuthor = { 
-      ...set, 
-      authorId: set.authorId || (currentUser ? currentUser.username : 'guest') 
-    };
-
-    if (set.id && sets.find(s => s.id === set.id)) {
-      setSets(sets.map(s => s.id === set.id ? setWithAuthor : s));
-    } else {
-      setWithAuthor.id = Date.now().toString();
-      setSets([...sets, setWithAuthor]);
-    }
+    setSets(previous => {
+      const existing = previous.find(item => item.id === set.id);
+      const saved = { ...existing, ...set,
+        id: existing?.id || crypto.randomUUID(),
+        authorId: existing?.authorId || set.authorId || currentUser?.username || 'guest' };
+      return existing ? previous.map(item => item.id === saved.id ? saved : item) : [...previous, saved];
+    });
   };
 
   const deleteSet = (id) => {
-    setSets(sets.filter(s => s.id !== id));
+    setSets(previous => previous.filter(s => s.id !== id));
     navigate('home');
   };
 
@@ -123,7 +130,7 @@ function App() {
 
       <main className="content-area">
         {(currentView === 'home' || currentView === 'library') && (
-          <Home sets={sets} navigate={navigate} setEditingSetId={setEditingSetId} currentUser={currentUser} />
+          <Home study={study} sets={sets} navigate={navigate} setEditingSetId={setEditingSetId} currentUser={currentUser} />
         )}
         {currentView === 'profile' && currentUser && (
           <Profile user={currentUser} sets={sets} onLogout={handleLogout} navigate={navigate} />
@@ -151,16 +158,35 @@ function App() {
           />
         )}
         {currentView === 'flashcards' && activeSet && (
-          <Flashcards set={activeSet} onBack={() => navigate('set-view')} />
+          <Flashcards
+            key={studyKey + ':' + activeSet.id}
+            set={activeSet}
+            masteredIds={study[activeSet.id]?.mastered || []}
+            starredIds={study[activeSet.id]?.starred || []}
+            onStarredChange={ids => updateStudy(activeSet.id, 'starred', ids)}
+            onMasteredChange={ids => updateStudy(activeSet.id, 'mastered', ids)}
+            onBack={() => navigate('set-view')}
+          />
         )}
         {currentView === 'learn' && activeSet && (
-          <Learn set={activeSet} onBack={() => navigate('set-view')} />
+          <Learn
+            key={studyKey + ':' + activeSet.id}
+            set={activeSet}
+            starredIds={study[activeSet.id]?.starred || []}
+            onMasteredChange={ids => updateStudy(activeSet.id, 'mastered', ids, true)}
+            onBack={() => navigate('set-view')}
+          />
         )}
         {currentView === 'test' && activeSet && (
-          <Test set={activeSet} onBack={() => navigate('set-view')} />
+          <Test
+            key={studyKey + ':' + activeSet.id}
+            set={activeSet}
+            onMasteredChange={ids => updateStudy(activeSet.id, 'mastered', ids, true)}
+            onBack={() => navigate('set-view')}
+          />
         )}
         {currentView === 'match' && activeSet && (
-          <Match set={activeSet} onBack={() => navigate('set-view')} />
+          <Match key={studyKey + ':' + activeSet.id} set={activeSet} onBack={() => navigate('set-view')} />
         )}
       </main>
     </div>
